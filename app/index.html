@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeuroBit64 Body Monitor</title>
+<meta name="description" content="Brain, heart, pancreas and kidney chips of the NeuroBit64 family running together, with the connections between the organs and an anomaly detector.">
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#17202e;--mut:#5b6777;--line:#dfe5ee;--acc:#0b6bcb;--ok:#12805c;--bad:#c62828;--warn:#b26a00;
+  --brain:#7b2cbf;--heart:#c62828;--panc:#b26a00;--kid:#0b6bcb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header,main{max-width:1180px;margin:0 auto;padding:0 16px}
+header{padding-top:14px}
+h1{font-size:20px;margin:0 0 2px} header p{margin:0;color:var(--mut);font-size:13px}
+main{padding-top:10px;padding-bottom:40px;display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select{padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;max-width:100%}
+button.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer;font:inherit}
+button.btn.ghost{background:#fff;color:var(--acc)} button.btn:disabled{opacity:.45;cursor:not-allowed}
+label{font-size:13px;color:var(--mut)}
+.pill{font-size:12px;padding:3px 9px;border-radius:99px;background:#e9eef6;color:var(--mut)}
+#banner{border-left:8px solid var(--line)}
+#banner.normal{border-left-color:var(--ok)} #banner.watch{border-left-color:var(--warn)} #banner.abnormal{border-left-color:var(--bad)}
+#statusText{font-size:20px;font-weight:700}
+#banner.normal #statusText{color:var(--ok)} #banner.watch #statusText{color:var(--warn)} #banner.abnormal #statusText{color:var(--bad)}
+#findings{margin:6px 0 0;padding-left:18px;font-size:14px} #findings li.l2{color:var(--bad)} #findings li.l1{color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:12px}
+.organ h2{font-size:15px;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+.organ h2 i{font-style:normal;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:#dff5ea;color:var(--ok)}
+.organ h2 i.bad{background:#fde8e8;color:var(--bad)} .organ h2 i.warn{background:#fff1d6;color:var(--warn)}
+.organ.brain{border-top:4px solid var(--brain)} .organ.heart{border-top:4px solid var(--heart)} .organ.panc{border-top:4px solid var(--panc)} .organ.kid{border-top:4px solid var(--kid)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13px;margin-bottom:6px}
+.kv b{font-variant-numeric:tabular-nums;text-align:right} .kv span{color:var(--mut)} .kv b.out{color:var(--bad)}
+canvas{width:100%;display:block;background:#fff;border-radius:6px}
+h3{font-size:14px;margin:0 0 6px}
+#log{font-size:13px;max-height:170px;overflow:auto;margin:0;padding-left:0;list-style:none} #log li{padding:2px 0;border-bottom:1px solid var(--line)} #log time{color:var(--mut);font-variant-numeric:tabular-nums;margin-right:8px}
+.note{font-size:12px;color:var(--mut)} #msg{font-size:13px;color:var(--warn)}
+svg text{font:12px system-ui,sans-serif;fill:var(--ink)}
+
+@media (prefers-color-scheme: dark){
+:root{color-scheme:dark;--bg:#0e1217;--card:#171c24;--ink:#f3f5f8;--mut:#a0abba;--line:#333d4c;--acc:#5b8def;--ok:#63d693;--bad:#ff8f85;--warn:#f2b85c}
+select,.seg button,button.btn.ghost{background:#202733;color:var(--ink)}
+.seg button[aria-pressed=true],button.btn{background:#2f6be6;border-color:#2f6be6;color:#fff}
+button.btn.ghost{border-color:var(--line)}
+.pill{background:#202733;color:var(--mut)} .pill.live{background:#143524;color:var(--ok)}
+.flag.on{background:#4a1d1d;border-color:#8a3a3a;color:#ffb4ad}
+.organ h2 i{background:#143524;color:var(--ok)} .organ h2 i.bad{background:#4a1d1d;color:#ffb4ad} .organ h2 i.warn{background:#463610;color:var(--warn)}
+svg text{fill:var(--ink)} svg rect{fill:#171c24}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>NeuroBit64 Body Monitor</h1>
+  <p>Three NeuroBit64-S brain chips and the heart, pancreas and kidney chips running together. Chips are the integer models of the Verilog designs.</p>
+</header>
+<main>
+  <section class="card">
+    <div class="row">
+      <label>Scenario <select id="scenario"></select></label>
+      <button class="btn" id="run">Run</button>
+      <button class="btn ghost" id="stop" disabled>Stop</button>
+      <button class="btn ghost" id="meal" disabled>Give a meal</button>
+      <button class="btn ghost" id="hw">Connect a chip…</button>
+      <span class="pill" id="state">stopped</span>
+      <span class="pill" id="speed"></span>
+    </div>
+    <div id="msg"></div>
+  </section>
+
+  <section class="card" id="banner">
+    <div id="statusText">Press Run</div>
+    <ul id="findings"></ul>
+  </section>
+
+  <section class="card">
+    <h3>Connections</h3>
+    <svg id="diagram" viewBox="0 0 760 236" style="width:100%;height:auto" role="img" aria-label="Brain connected to heart, pancreas and kidney">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5b6777"/></marker></defs>
+      <g fill="none" stroke="#5b6777" stroke-width="1.5">
+        <path d="M300 55 L130 140" marker-end="url(#ar)" marker-start="url(#ar)"/><path d="M380 62 L380 140" marker-end="url(#ar)" marker-start="url(#ar)"/><path d="M460 55 L630 140" marker-end="url(#ar)" marker-start="url(#ar)"/>
+        <path d="M130 196 Q380 236 630 196" stroke-dasharray="5 4" marker-end="url(#ar)"/><path d="M440 168 L570 168" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+      </g>
+      <g stroke-width="2" fill="#fff"><rect x="290" y="8" width="180" height="54" rx="10" stroke="#7b2cbf"/><rect x="40" y="140" width="180" height="54" rx="10" stroke="#c62828"/><rect x="290" y="140" width="180" height="54" rx="10" stroke="#b26a00"/><rect x="540" y="140" width="180" height="54" rx="10" stroke="#0b6bcb"/></g>
+      <text x="380" y="30" text-anchor="middle" font-weight="700">Brain: 3 x NeuroBit64-S</text><text x="380" y="48" text-anchor="middle" id="dBrain">192 neurons</text>
+      <text x="130" y="162" text-anchor="middle" font-weight="700">Heart chip</text><text x="130" y="180" text-anchor="middle" id="dHeart">-</text>
+      <text x="380" y="162" text-anchor="middle" font-weight="700">Pancreas chip</text><text x="380" y="180" text-anchor="middle" id="dPanc">-</text>
+      <text x="630" y="162" text-anchor="middle" font-weight="700">Kidney chip</text><text x="630" y="180" text-anchor="middle" id="dKid">-</text>
+      <text x="190" y="92" text-anchor="middle" id="lH">drive</text><text x="392" y="104" id="lP">drive</text><text x="570" y="92" text-anchor="middle" id="lK">drive</text>
+      <text x="380" y="232" text-anchor="middle" id="lHK" style="fill:#5b6777">heart rate sets the kidney perfusion pressure</text>
+      <text x="505" y="160" text-anchor="middle" id="lPK" style="fill:#5b6777">glucose</text>
+    </svg>
+  </section>
+
+  <div class="grid">
+    <section class="card organ brain"><h2>Brain <i id="bBadge">-</i></h2><div class="kv" id="bKv"></div><canvas id="cB" height="90"></canvas><p class="note">Spikes of the three brain chips per report.</p></section>
+    <section class="card organ heart"><h2>Heart <i id="hBadge">-</i></h2><div class="kv" id="hKv"></div><canvas id="cH" height="90"></canvas><p class="note">Mean membrane potential of 1000 myocytes (mV).</p></section>
+    <section class="card organ panc"><h2>Pancreas <i id="pBadge">-</i></h2><div class="kv" id="pKv"></div><canvas id="cP" height="90"></canvas><p class="note">Glucose (dark) and the value read from the cells (light), mg/dL.</p></section>
+    <section class="card organ kid"><h2>Kidney <i id="kBadge">-</i></h2><div class="kv" id="kKv"></div><canvas id="cK" height="90"></canvas><p class="note">Total filtration (dark, %) and renin level (light, %).</p></section>
+  </div>
+
+  <section class="card"><h3>Anomaly score (0 = inside the healthy range, 1 = far outside)</h3><canvas id="cS" height="70"></canvas></section>
+  <section class="card"><h3>Event log</h3><ul id="log"></ul></section>
+  <section class="card note">
+    <b>What is real here.</b> The six chips are the same integer models that were compared bit by bit with the Verilog designs. The connections between the organs
+    (heart rate to kidney pressure, the glucose balance fed by meals, insulin and glucagon) and the healthy ranges are simple rules of this app; they are not validated physiology.
+    The detector combines the flags raised by the chips, values outside the healthy range of this model, and four patterns across organs.
+    “Connect a chip” takes the reports of a real chip from a serial port or a Bluetooth serial module in place of the simulated one; no chip has been fabricated yet, so this path is untested.
+    Research model, not a medical device.
+  </section>
+</main>
+<script src="nb64_common.js"></script>
+<script src="nb64_cardio_model.js"></script>
+<script src="nb64_pancreas_model.js"></script>
+<script src="nb64_kidney_model.js"></script>
+<script src="body_model.js"></script>
+<script src="body.js"></script>
+</body>
+</html>
