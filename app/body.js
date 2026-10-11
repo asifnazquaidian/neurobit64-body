@@ -97,4 +97,9 @@
   $('scenario').addEventListener('change', () => { if (S.running) { stop(); run(); } });
   window.addEventListener('resize', render);
   window.NB64BodyUI = { S, run, stop };
+  // Links can choose the scenario and start it:  ?scenario=0..9  &meal=1  &run=0
+  // The six simulated chips start by themselves unless run=0.
+  const Q = new URLSearchParams(location.search), qs = parseInt(Q.get('scenario'), 10);
+  if (qs >= 0 && qs < B.SCENARIOS.length) $('scenario').value = String(qs);
+  if (Q.get('run') !== '0') { run(); if (Q.get('meal') === '1') setTimeout(() => S.body && S.body.eat(), 6000); }
 })();
